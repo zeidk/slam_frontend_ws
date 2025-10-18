@@ -1,0 +1,7 @@
+sphinx>=8.0
+sphinx-rtd-theme
+sphinxcontrib-mermaid
+myst-parser
+sphinx-autodoc-typehints
+sphinx-copybutton
+# Note: We don't need numpy or ROS packages since they're mocked in conf.py
