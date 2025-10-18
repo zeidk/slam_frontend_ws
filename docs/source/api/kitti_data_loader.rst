@@ -1,21 +1,44 @@
-KITTI Data Loader Module
-===============================
+KITTI Data Loader
+=================
+
+Module
+-------
 
 .. automodule:: kitti_data_loader.kitti_publisher
    :members:
    :undoc-members:
    :show-inheritance:
 
-KITTI Data Loader Configuration
-===============================
+Launch Files
+-------------
+
+This section describes the launch files used to start the nodes in this workspace.
+
+`kitti_data_loader.launch.py`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**File:** `src/kitti_data_loader/launch/kitti_data_loader.launch.py`
+
+This launch file starts the KITTI publisher node with parameters loaded from
+the configuration file. It also allows all parameters to be overridden from
+the command line. 
+
+.. literalinclude:: ../../../src/kitti_data_loader/launch/kitti_data_loader.launch.py
+   :language: python
+   :caption: kitti_data_loader/launch/kitti_data_loader.launch.py
+   :linenos:
+
+
+Parameters
+--------------
 
 .. literalinclude:: ../../../src/kitti_data_loader/config/params.yaml
    :language: yaml
    :caption: kitti_data_loader/config/params.yaml
    :linenos:
 
-Key Parameters
---------------
+Description
+~~~~~~~~~~~~~~
 
 +-------------------------+-----------------------------+-------------------------------------------------------------+
 | Parameter               | Default                     | Meaning                                                     |

@@ -1,14 +1,35 @@
 
-KITTI LiDAR Preprocessing Module
+KITTI LiDAR Preprocessing
 ======================================
+
+Module
+-------
 
 .. automodule:: lidar_preprocessing.voxel_downsampler
    :members:
    :undoc-members:
    :show-inheritance:
 
-KITTI LiDAR Preprocessing Configuration
-========================================
+
+Launch Files
+-------------
+
+`preprocessing.launch.py` 
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**File:** `src/lidar_preprocessing/launch/preprocessing.launch.py`
+
+This launch file starts the voxel downsampling node. 
+
+.. literalinclude:: ../../../src/lidar_preprocessing/launch/preprocessing.launch.py
+   :language: python
+   :caption: lidar_preprocessing/launch/preprocessing.launch.py
+   :linenos:
+
+
+
+Parameters
+-----------
 
 This page shows the YAML configuration files used by the package
 ``lidar_preprocessing`` along with short explanations for important keys.
@@ -18,8 +39,8 @@ This page shows the YAML configuration files used by the package
    :caption: lidar_preprocessing/config/params.yaml
    :linenos:
 
-Key Parameters
---------------
+Description
+~~~~~~~~~~~
 
 +------------------------+---------+-----------------------------------------------+
 | Parameter              | Default | Meaning                                       |

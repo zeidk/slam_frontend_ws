@@ -66,6 +66,14 @@ autodoc_mock_imports = [
     "rclpy.qos",
 ]
 
+autodoc_default_options = {
+    'members': True,
+    'undoc-members': True,
+    'private-members': True,   # <— include _private names
+    'show-inheritance': True,
+}
+
+
 # Pure RST (remove .md if you aren’t mixing Markdown)
 source_suffix = {".rst": "restructuredtext", ".md": "markdown"}
 
