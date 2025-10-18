@@ -1,0 +1,8 @@
+voxel_downsampler:
+  ros__parameters:
+    voxel_size: 0.2          # 0.2m voxels (larger = more reduction)
+    min_points_per_voxel: 1
+    filter_ground: false      # Set true to remove ground points
+    ground_threshold: -1.5    # Z threshold for ground (meters)
+    input_topic: "kitti/raw_cloud"
+    output_topic: "preprocessing/downsampled_cloud"

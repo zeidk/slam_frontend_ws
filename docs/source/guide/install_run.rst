@@ -21,6 +21,7 @@ Foxglove Bridge:
 
    sudo apt update
    sudo apt install ros-$ROS_DISTRO-foxglove-bridge
+   sudo apt-get install -y python3-pandas
 
 (Optional) Python tools used elsewhere in this project:
 
