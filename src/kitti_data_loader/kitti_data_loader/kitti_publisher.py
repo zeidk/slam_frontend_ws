@@ -57,7 +57,7 @@ Run inside an environment where ROS 2 is sourced and your workspace is built:
     ros2 run <your_pkg> kitti_publisher \\
       --ros-args \\
       -p kitti_data_dir:=/data/kitti \\
-      -p dataset_sequence:=00 \\
+      -p dataset_sequence:=s00 \\
       -p base_frame_id:=map \\
       -p lidar_frame_id:=velodyne \\
       -p publish_rate_hz:=5.0
@@ -134,7 +134,7 @@ class KittiPublisher(Node):
         self.declare_parameter("ground_truth_pose_topic", "/kitti/ground_truth_pose")
         self.declare_parameter("base_frame_id", "odom")
         self.declare_parameter("lidar_frame_id", "velodyne")
-        self.declare_parameter("dataset_sequence", "00")
+        self.declare_parameter("dataset_sequence", "s00")
 
         # Get parameters
         kitti_dir = (
@@ -157,9 +157,16 @@ class KittiPublisher(Node):
         self.lidar_frame = (
             self.get_parameter("lidar_frame_id").get_parameter_value().string_value
         )
-        self.dataset_sequence = (
+        # Get the "s00" or "s01" string
+        seq_param_string = (
             self.get_parameter("dataset_sequence").get_parameter_value().string_value
         )
+
+        # Strip the 's' prefix if it exists, otherwise use the string as-is
+        if seq_param_string.startswith('s'):
+            self.dataset_sequence = seq_param_string[1:] # e.g., "s01" -> "01"
+        else:
+            self.dataset_sequence = seq_param_string # e.g., "00"
 
         # Setup paths
         self.velodyne_path = os.path.join(

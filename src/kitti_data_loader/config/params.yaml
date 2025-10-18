@@ -2,7 +2,7 @@ kitti_publisher_node:
   ros__parameters:
     # IMPORTANT: Update this to the absolute path of your workspace
     kitti_data_dir: '/home/zeid/github/slam_frontend_ws/data/kitti' 
-    dataset_sequence: '00' 
+    dataset_sequence: 's00' 
     publish_rate_hz: 10.0
     pointcloud_topic: '/kitti/pointcloud_raw'
     ground_truth_pose_topic: '/kitti/ground_truth_pose'
