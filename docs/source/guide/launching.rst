@@ -11,7 +11,6 @@ Launch File
    :language: python
    :caption: launch/kitti_data_loader.launch.py
    :linenos:
-   :emphasize-lines: 8-9,11-18
 
 Usage
 -----
