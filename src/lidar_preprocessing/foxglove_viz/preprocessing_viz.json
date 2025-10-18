@@ -2,16 +2,32 @@
   "configById": {
     "3D!raw": {
       "layers": {
-        "grid": {"layerId": "grid", "visible": true}
+        "grid": {
+          "layerId": "grid",
+          "visible": true
+        }
       },
       "cameraState": {
-        "distance": 60,
         "perspective": true,
-        "phi": 55,
-        "target": [0, 0, 0],
-        "targetOffset": [0, 0, 0],
-        "targetOrientation": [0, 0, 0, 1],
-        "thetaOffset": 45,
+        "distance": 59.99999999999806,
+        "phi": 78.96103896103921,
+        "thetaOffset": 17.53246753246827,
+        "targetOffset": [
+          -0.05705712054807513,
+          0.05705712054807516,
+          0
+        ],
+        "target": [
+          0,
+          0,
+          0
+        ],
+        "targetOrientation": [
+          0,
+          0,
+          0,
+          1
+        ],
         "fovy": 45,
         "near": 0.5,
         "far": 5000
@@ -20,30 +36,68 @@
       "followTf": "velodyne",
       "scene": {
         "backgroundColor": "#1a1a1a",
-        "transforms": {"showLabel": false}
+        "transforms": {
+          "showLabel": false
+        }
       },
       "topics": {
         "/kitti/raw_cloud": {
           "visible": true,
-          "colorMode": {"mode": "flat", "flatColor": "#ff5555"},
+          "colorMode": {
+            "mode": "flat",
+            "flatColor": "#ff5555"
+          },
           "pointSize": 1,
           "pointShape": "circle",
           "decayTime": 0
+        },
+        "/kitti/pointcloud_raw": {
+          "visible": true,
+          "colorField": "intensity",
+          "colorMode": "colormap",
+          "colorMap": "turbo"
         }
-      }
+      },
+      "transforms": {},
+      "publish": {
+        "type": "point",
+        "poseTopic": "/move_base_simple/goal",
+        "pointTopic": "/clicked_point",
+        "poseEstimateTopic": "/initialpose",
+        "poseEstimateXDeviation": 0.5,
+        "poseEstimateYDeviation": 0.5,
+        "poseEstimateThetaDeviation": 0.26179939
+      },
+      "imageMode": {}
     },
     "3D!downsampled": {
       "layers": {
-        "grid": {"layerId": "grid", "visible": true}
+        "grid": {
+          "layerId": "grid",
+          "visible": true
+        }
       },
       "cameraState": {
-        "distance": 60,
         "perspective": true,
-        "phi": 55,
-        "target": [0, 0, 0],
-        "targetOffset": [0, 0, 0],
-        "targetOrientation": [0, 0, 0, 1],
+        "distance": 59.999999999996454,
+        "phi": 102.33766233766316,
         "thetaOffset": 45,
+        "targetOffset": [
+          0,
+          0,
+          0
+        ],
+        "target": [
+          0,
+          0,
+          0
+        ],
+        "targetOrientation": [
+          0,
+          0,
+          0,
+          1
+        ],
         "fovy": 45,
         "near": 0.5,
         "far": 5000
@@ -52,22 +106,46 @@
       "followTf": "velodyne",
       "scene": {
         "backgroundColor": "#1a1a1a",
-        "transforms": {"showLabel": false}
+        "transforms": {
+          "showLabel": false
+        },
+        "syncCamera": false
       },
       "topics": {
         "/preprocessing/downsampled_cloud": {
           "visible": true,
-          "colorMode": {"mode": "flat", "flatColor": "#55ff55"},
+          "colorMode": "colormap",
           "pointSize": 3,
           "pointShape": "circle",
-          "decayTime": 0
+          "decayTime": 0,
+          "colorField": "intensity",
+          "colorMap": "turbo"
         }
-      }
+      },
+      "transforms": {},
+      "publish": {
+        "type": "point",
+        "poseTopic": "/move_base_simple/goal",
+        "pointTopic": "/clicked_point",
+        "poseEstimateTopic": "/initialpose",
+        "poseEstimateXDeviation": 0.5,
+        "poseEstimateYDeviation": 0.5,
+        "poseEstimateThetaDeviation": 0.26179939
+      },
+      "imageMode": {}
     },
     "Plot!stats": {
       "paths": [
-        {"value": "/kitti/raw_cloud.width", "enabled": true, "timestampMethod": "receiveTime"},
-        {"value": "/preprocessing/downsampled_cloud.width", "enabled": true, "timestampMethod": "receiveTime"}
+        {
+          "value": "/kitti/pointcloud_raw.width",
+          "enabled": true,
+          "timestampMethod": "receiveTime"
+        },
+        {
+          "value": "/preprocessing/downsampled_cloud.width",
+          "enabled": true,
+          "timestampMethod": "receiveTime"
+        }
       ],
       "showXAxisLabels": true,
       "showYAxisLabels": true,
@@ -81,7 +159,9 @@
   },
   "globalVariables": {},
   "userNodes": {},
-  "playbackConfig": {"speed": 1},
+  "playbackConfig": {
+    "speed": 1
+  },
   "layout": {
     "first": {
       "first": "3D!raw",

@@ -262,17 +262,42 @@ class VoxelDownsampler(Node):
         if has_intensity:
             # Respect actual field offsets and padding. Skip NaNs provided by the generator.
             gen = pc2.read_points(msg, field_names=("x", "y", "z", "intensity"), skip_nans=True)
-            arr = np.array(list(gen), dtype=np.float32)
-            if arr.ndim == 1:
-                arr = arr.reshape(-1, 4)
+            points_list = list(gen)
+            
+            if len(points_list) == 0:
+                return np.empty((0, 4), dtype=np.float32)
+            
+            # Handle structured array from read_points
+            if isinstance(points_list[0], np.void):
+                # Structured array - extract fields individually
+                arr = np.zeros((len(points_list), 4), dtype=np.float32)
+                for i, pt in enumerate(points_list):
+                    arr[i] = [pt['x'], pt['y'], pt['z'], pt['intensity']]
+            else:
+                # Tuple or list - convert directly
+                arr = np.array(points_list, dtype=np.float32)
+                if arr.ndim == 1:
+                    arr = arr.reshape(-1, 4)
         else:
             # Fall back to xyz and synthesize intensity = 1.0
             gen = pc2.read_points(msg, field_names=("x", "y", "z"), skip_nans=True)
-            xyz = np.array(list(gen), dtype=np.float32)
-            if xyz.size == 0:
-                return xyz.reshape(0, 4)
-            if xyz.ndim == 1:
-                xyz = xyz.reshape(-1, 3)
+            points_list = list(gen)
+            
+            if len(points_list) == 0:
+                return np.empty((0, 4), dtype=np.float32)
+            
+            # Handle structured array from read_points
+            if isinstance(points_list[0], np.void):
+                # Structured array - extract fields individually
+                xyz = np.zeros((len(points_list), 3), dtype=np.float32)
+                for i, pt in enumerate(points_list):
+                    xyz[i] = [pt['x'], pt['y'], pt['z']]
+            else:
+                # Tuple or list - convert directly
+                xyz = np.array(points_list, dtype=np.float32)
+                if xyz.ndim == 1:
+                    xyz = xyz.reshape(-1, 3)
+            
             intensity = np.ones((xyz.shape[0], 1), dtype=np.float32)
             arr = np.concatenate([xyz, intensity], axis=1)
 
@@ -317,6 +342,11 @@ class VoxelDownsampler(Node):
         assert pts.ndim == 2 and pts.shape[1] == 4, "Expected pts to be (N, 4) as [x, y, z, intensity]"
         assert pts.dtype == np.float32, "Expected pts dtype float32"
 
+        # Compose header.
+        header = Header()
+        header.frame_id = frame_id if frame_id else "map"
+        header.stamp = stamp if stamp is not None else self.get_clock().now().to_msg()
+
         # Explicit field layout for stability across consumers.
         fields = [
             PointField(name="x", offset=0, datatype=PointField.FLOAT32, count=1),
@@ -325,16 +355,21 @@ class VoxelDownsampler(Node):
             PointField(name="intensity", offset=12, datatype=PointField.FLOAT32, count=1),
         ]
 
-        # Compose header.
-        header = Header()
-        header.frame_id = frame_id if frame_id else "map"
-        header.stamp = stamp if stamp is not None else self.get_clock().now().to_msg()
-
-        # pc2.create_cloud expects an iterable of tuples or lists.
-        # Converting to a list of tuples once is simple and readable.
-        points_iter = [tuple(row) for row in pts.tolist()]
-
-        return pc2.create_cloud(header, fields, points_iter)
+        # Build PointCloud2 message manually for better performance
+        msg = PointCloud2()
+        msg.header = header
+        msg.height = 1
+        msg.width = len(pts)
+        msg.fields = fields
+        msg.is_bigendian = False
+        msg.point_step = 16  # 4 fields * 4 bytes each
+        msg.row_step = msg.point_step * msg.width
+        msg.is_dense = True
+        
+        # Convert to bytes directly - this is much faster than iterating
+        msg.data = pts.tobytes()
+        
+        return msg
 
     # =========================================================================
     # Voxel downsampling
