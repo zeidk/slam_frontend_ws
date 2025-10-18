@@ -3,6 +3,7 @@ build/
 install/
 log/
 data/kitti/
+data/
 
 # Python
 __pycache__/
