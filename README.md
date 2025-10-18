@@ -8,7 +8,7 @@
 
 For detailed API documentation, installation guide, and pipeline architecture, see:
 - **[Installation & Running Guide](https://slam-frontend.readthedocs.io/en/latest/guide/install_run.html)**
-- **[Pipeline Architecture](hhttps://slam-frontend.readthedocs.io/en/latest/guide/pipeline.html)**
+- **[Pipeline Architecture](https://slam-frontend.readthedocs.io/en/latest/guide/pipeline.html)**
 - **[API Reference](https://slam-frontend.readthedocs.io/en/latest/api/index.html)**
 
 <!-- ## Workspace
