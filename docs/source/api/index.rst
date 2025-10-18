@@ -8,3 +8,4 @@ in the ROS 2 SLAM Frontend packages.
    :maxdepth: 2
 
    kitti_data_loader
+   lidar_preprocessing

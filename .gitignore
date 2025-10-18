@@ -19,6 +19,7 @@ venv/
 docs/build/
 docs/_build/
 *.zip
+tree.txt
 
 # IDE
 .vscode/

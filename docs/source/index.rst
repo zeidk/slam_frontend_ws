@@ -10,7 +10,6 @@ Welcome to the documentation for the **ROS 2 SLAM Frontend** workspace.
    guide/install_run
    guide/pipeline
    guide/launching
-   guide/configuration
 
 .. toctree::
    :maxdepth: 2

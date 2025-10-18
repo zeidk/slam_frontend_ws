@@ -2,72 +2,70 @@
 # -*- coding: utf-8 -*-
 
 """
-voxel_downsampler.py
-====================
+A ROS 2 node that subscribes to a raw LiDAR `sensor_msgs/PointCloud2`, applies voxel-grid downsampling using NumPy, and publishes a sanitized, consistent `PointCloud2` containing fields [x, y, z, intensity] as float32.
 
-A ROS 2 node that subscribes to a raw LiDAR `sensor_msgs/PointCloud2`, applies
-voxel-grid downsampling with NumPy, and publishes a sanitized, consistent
-`PointCloud2` containing fields [x, y, z, intensity] as float32.
-
-Design goals
+Design Goals
 ------------
-1) Robustness to arbitrary PointCloud2 layouts.
-   - Uses `sensor_msgs_py.point_cloud2.read_points`, which respects field
-     offsets, padding, and extra fields (e.g., ring, time).
+    - Robustness to arbitrary PointCloud2 layouts:
+        - Uses `sensor_msgs_py.point_cloud2.read_points`, respecting field offsets, padding, and extra fields (e.g., ring, time).
+    - Safety for visualization tools:
+        - Drops rows containing NaN or Inf prior to processing.
+        - Skips publishing if the downsampling result is empty.
+    - Simple deployment:
+        - Only NumPy is required (no pandas).
+    - Friendly defaults for debugging:
+        - Publishes with RELIABLE QoS by default for easy `ros2 topic echo`.
+        - Subscribes using the standard `qos_profile_sensor_data`.
 
-2) Safety for visualization tools.
-   - Drops any rows containing NaN or Inf prior to processing.
-   - Skips publishing if the result is empty.
+Parameters (declare with ROS 2 parameters)
+------------------------------------------
+  input_topic (str):
+      Topic for incoming raw point clouds. Default: ``"kitti/raw_cloud"``.
+  output_topic (str):
+      Topic for the published downsampled cloud. Default: ``"/preprocessing/downsampled_cloud"``.
+  voxel_size (float):
+      Edge length in meters for the cubic voxels. Must be positive. Default: ``0.2``.
+  min_points_per_voxel (int):
+      Minimum number of points required within a voxel to keep its centroid. Default: ``1``.
+  filter_ground (bool):
+      If True, discard points with z <= ground_threshold before downsampling. Default: ``False``.
+  ground_threshold (float):
+      Z height threshold (meters) used when ``filter_ground`` is True. Default: ``-1.2``.
+  output_qos_reliability (str):
+      Reliability setting for the publisher ("reliable" or "best_effort"). Default: ``"reliable"``.
 
-3) Simple deployment.
-   - No pandas dependency; only NumPy is required.
-
-4) Friendly defaults for debugging.
-   - Publishes with RELIABLE reliability by default so that
-     `ros2 topic echo` works without QoS flags.
-   - Subscriber uses the standard sensor-data QoS.
-
-Parameters
-----------
-- input_topic : str (default: "kitti/raw_cloud")
-    Topic to subscribe for incoming raw point clouds.
-
-- output_topic : str (default: "/preprocessing/downsampled_cloud")
-    Topic to publish the downsampled cloud.
-
-- voxel_size : float (default: 0.2)
-    Edge length in meters for cubic voxels. Must be positive.
-
-- min_points_per_voxel : int (default: 1)
-    Minimum number of points in a voxel required to keep its centroid.
-
-- filter_ground : bool (default: False)
-    If True, discard points with z <= ground_threshold prior to downsampling.
-
-- ground_threshold : float (default: -1.2)
-    Z height threshold used when filter_ground is True.
-
-- output_qos_reliability : str (default: "reliable")
-    Reliability for the publisher. One of {"reliable", "best_effort"}.
-    "reliable" is recommended for easy introspection with `ros2 topic echo`.
+Published Interfaces
+--------------------
+  * ``sensor_msgs/PointCloud2`` on ``output_topic``:
+    - Fields: ``x``, ``y``, ``z``, ``intensity`` (all ``FLOAT32``)
+    - ``point_step = 16``
+    - Header ``frame_id`` and ``stamp`` are copied from the input message.
 
 Usage
 -----
-Launch as usual (parameters may be set in the launch file):
+Launch via the provided launch file (parameters can be overridden):
 
-    ros2 launch lidar_preprocessing preprocessing.launch.py
+.. code-block:: bash
 
-Sanity checks
+    ros2 launch lidar_preprocessing preprocessing.launch.py voxel_size:=0.1
+
+Sanity Checks
 -------------
-Ensure input arrives:
+Ensure input arrives (adjust topic if needed):
 
-    ros2 topic echo -n 1 kitti/raw_cloud --qos-reliability best_effort
+.. code-block:: bash
+
+    ros2 topic echo -n 1 /kitti/pointcloud_raw --qos-reliability best_effort
 
 Inspect output header first:
 
-    ros2 topic echo -n 1 /preprocessing/downsampled_cloud.header
+.. code-block:: bash
+
+    ros2 topic echo -n 1 /preprocessing/downsampled_cloud header
 
 Inspect QoS and connections:
+
+.. code-block:: bash
 
     ros2 topic info /preprocessing/downsampled_cloud --verbose
 """
