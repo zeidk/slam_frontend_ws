@@ -1,9 +1,10 @@
-sphinx>=8.0
+# sphinx>=8.0
 sphinx-rtd-theme
 sphinxcontrib-mermaid
 myst-parser
 sphinx-autodoc-typehints
 sphinx-copybutton
 sphinx-design
-open3d>=0.17
+furo
+# open3d>=0.17
 # Note: We don't need numpy or ROS packages since they're mocked in conf.py

@@ -20,7 +20,7 @@ Design Goals
 Parameters (declare with ROS 2 parameters)
 ------------------------------------------
   input_topic (str):
-      Topic for incoming raw point clouds. Default: ``"kitti/raw_cloud"``.
+    Topic for incoming raw point clouds. Default: ``"kitti/raw_cloud"``.
   output_topic (str):
       Topic for the published downsampled cloud. Default: ``"/preprocessing/downsampled_cloud"``.
   voxel_size (float):

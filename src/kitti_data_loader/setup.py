@@ -14,7 +14,7 @@ setup(
         (os.path.join("share", package_name, "launch"), glob("launch/*.launch.py")),
         (os.path.join("share", package_name, "config"), glob("config/*.yaml")),
     ],
-    install_requires=["setuptools", "scipy", "numpy"],
+    install_requires=["setuptools", "scipy", "numpy", "tf_transformations", "transforms3d"],
     zip_safe=True,
     maintainer="zeid",
     maintainer_email="zeidk@umd.edu",

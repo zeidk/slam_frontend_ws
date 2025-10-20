@@ -50,7 +50,7 @@ autodoc_mock_imports = [
     "std_msgs",
     "nav_msgs",
     "geometry_msgs",
-    "numpy",
+    # "numpy",
     "python3-numpy",
     "yaml_doc",  # Add your custom extension
     "ament_index_python",
@@ -64,6 +64,8 @@ autodoc_mock_imports = [
     "std_msgs.msg",
     "builtin_interfaces.msg",
     "rclpy.qos",
+    "transforms3d",
+    "tf_transformations"
 ]
 
 autodoc_default_options = {
@@ -78,4 +80,5 @@ autodoc_default_options = {
 source_suffix = {".rst": "restructuredtext", ".md": "markdown"}
 
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
-html_theme = "sphinx_rtd_theme"
+# html_theme = "sphinx_rtd_theme"
+html_theme = "furo"

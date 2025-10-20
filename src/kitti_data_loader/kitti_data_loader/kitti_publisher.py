@@ -32,34 +32,13 @@ The Velodyne point cloud data is NOT transformed because it's already in ROS-com
 Assumptions
 -----------
 - Directory layout follows KITTI Odometry:
-  <kitti_data_dir>/
-    data_odometry_velodyne/dataset/sequences/<SEQ>/velodyne/*.bin
-    data_odometry_poses/dataset/poses/<SEQ>.txt             (optional; required for map->base_link)
-    data_odometry_calib/dataset/sequences/<SEQ>/calib.txt   (or calib_<SEQ>.txt; used for base_link->velodyne)
 
-Parameters
-----------
-kitti_data_dir (str):
-    Root folder containing the KITTI odometry subfolders. Default: "."
-dataset_sequence (str):
-    Two-digit sequence string, e.g., "00" or "s00". Default: "00".
-    If prefixed with 's' or 'S', the prefix will be stripped automatically.
-publish_rate_hz (float):
-    Scan publish rate. Default: 10.0.
-pointcloud_topic (str):
-    Topic for raw point clouds. Default: "/kitti/pointcloud_raw".
-ground_truth_pose_topic (str):
-    Topic for ground-truth poses (PoseStamped). Default: "/kitti/ground_truth_pose".
-map_frame_id (str):
-    Global frame. Default: "map".
-base_frame_id (str):
-    Vehicle body frame. By default we treat this as camera0 frame for self-consistency. Default: "base_link".
-lidar_frame_id (str):
-    LiDAR sensor frame. Default: "velodyne".
-base_equals_cam0 (bool):
-    If True (default), we assume base_link coincides with cam0 so that KITTI camera-frame poses are correct for map->base_link.
-use_cam0_poses (bool):
-    If True (default), read KITTI odometry poses (camera0 frame) from poses/<SEQ>.txt.
+  .. code-block:: text
+
+    <kitti_data_dir>/
+      data_odometry_velodyne/dataset/sequences/<SEQ>/velodyne/*.bin
+      data_odometry_poses/dataset/poses/<SEQ>.txt             (optional; required for map->base_link)
+      data_odometry_calib/dataset/sequences/<SEQ>/calib.txt   (or calib_<SEQ>.txt; used for base_link->velodyne)
 
 Outputs
 -------
@@ -70,10 +49,10 @@ Outputs
 
 Usage
 -----
-    ros2 run kitti_data_loader kitti_publisher \
-        --ros-args -p kitti_data_dir:=/path/to/kitti -p dataset_sequence:=00
+.. code-block:: bash
 
-This file replaces previous versions while keeping the same public interface. Internal members now use leading underscores.
+    ros2 launch kitti_data_loader kitti_data_loader.launch.py
+
 """
 from __future__ import annotations
 
