@@ -31,3 +31,5 @@ tree.txt
 # OS
 .DS_Store
 Thumbs.db
+src/kitti_data_loader/kitti_data_loader/__pycache__/__init__.cpython-312.pyc
+src/kitti_data_loader/kitti_data_loader/__pycache__/kitti_publisher.cpython-312.pyc
