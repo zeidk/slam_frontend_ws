@@ -14,7 +14,7 @@ setup(
         (os.path.join("share", package_name, "launch"), glob("launch/*.launch.py")),
         (os.path.join("share", package_name, "config"), glob("config/*.yaml")),
     ],
-    install_requires=["setuptools"],
+    install_requires=["setuptools", "scipy", "numpy"],
     zip_safe=True,
     maintainer="zeid",
     maintainer_email="zeidk@umd.edu",

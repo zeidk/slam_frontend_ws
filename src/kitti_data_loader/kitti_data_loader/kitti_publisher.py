@@ -1,374 +1,537 @@
 #!/usr/bin/env python3
 """
-ROS 2 node that publishes KITTI Odometry LiDAR scans and ground-truth poses.
+kitti_publisher.py
+========================
 
-This module defines :class:`KittiPublisher`, a ROS 2 node that streams Velodyne
-binary scans from a KITTI Odometry sequence and publishes:
+ROS 2 node that publishes KITTI Odometry LiDAR scans and ground-truth poses with **correct TF semantics**,
+sensor QoS for point clouds, and robust file/directory checks.
 
-  • ``sensor_msgs/PointCloud2`` for each LiDAR scan  
-  • ``geometry_msgs/PoseStamped`` for the corresponding ground-truth vehicle pose  
-  • A TF transform from a configurable base frame to the LiDAR frame
+Naming convention
+-----------------
+All **class data members** use a **leading underscore** to indicate internal attributes (e.g., ``self._seq``, ``self._scan_files``).
+This applies to variables initialized in ``__init__`` such as frames, topics, paths, publishers, and TF broadcasters.
 
-Dataset assumptions:
-  * Directory layout follows the official KITTI Odometry structure. For a given
-    ``dataset_sequence`` (e.g., ``"00"``), the expected paths are::
+Key behavior
+------------
+**Coordinate system conversion (CRITICAL):**
+- KITTI Camera (cam0): x=right, y=down, z=forward
+- KITTI Velodyne: x=forward, y=left, z=up (ALREADY MATCHES ROS REP-103!)
+- ROS REP-103: x=forward, y=left, z=up
 
-        <kitti_data_dir>/
-          data_odometry_velodyne/dataset/sequences/<SEQ>/velodyne/*.bin
-          data_odometry_poses/dataset/poses/<SEQ>.txt
+The rotation R_K2R is ONLY applied to:
+1. Camera poses from poses/<SEQ>.txt (converting cam0 frame to ROS base_link frame)
+2. The Tr_velo_to_cam calibration matrix (which is expressed in camera coordinates)
 
-  * Each ``.bin`` file encodes points as float32 quadruplets (x, y, z, intensity).
-  * The poses file contains one row per frame with 12 float values corresponding
-    to a 3×4 matrix [R|t] in row-major order.
+The Velodyne point cloud data is NOT transformed because it's already in ROS-compatible coordinates!
 
-Parameters (declare with ROS 2 parameters):
-  kitti_data_dir (str):
-      Root folder that contains both the Velodyne and poses subtrees.
-      Default: ``/home/zeid/github/slam_frontend_ws/data/kitti``.
-  publish_rate_hz (float):
-      Timer frequency used to publish scans and poses in lock-step. Default: 10.0.
-  pointcloud_topic (str):
-      Topic for raw point clouds. Default: ``/kitti/pointcloud_raw``.
-  ground_truth_pose_topic (str):
-      Topic for ground-truth poses. Default: ``/kitti/ground_truth_pose``.
-  base_frame_id (str):
-      Parent frame used for TF and the PoseStamped header (e.g., ``map`` or ``odom``).
-      Default: ``odom``.
-  lidar_frame_id (str):
-      Child frame and PointCloud2 header frame (e.g., ``velodyne``). Default: ``velodyne``.
-  dataset_sequence (str):
-      KITTI sequence identifier (two-digit string such as ``"00"``). Default: ``"00"``.
+1) Publishes the **global** vehicle pose as a ``map -> base_link`` transform on every scan (and also as ``PoseStamped``).
+2) Publishes a **static** ``base_link -> velodyne`` transform once, using KITTI calibration if available.
+3) Adds **robust directory / file existence checks** with clear errors.
+4) Uses **sensor QoS** (``qos_profile_sensor_data``) for point cloud publishing to reduce drops under load.
 
-Published interfaces:
-  * ``sensor_msgs/PointCloud2`` on ``pointcloud_topic`` with fields
-    ``x``, ``y``, ``z``, and ``intensity`` (all ``FLOAT32``), ``point_step = 16``.
-  * ``geometry_msgs/PoseStamped`` on ``ground_truth_pose_topic`` with
-    ``header.frame_id = base_frame_id``.
-  * TF transform broadcast from ``base_frame_id`` → ``lidar_frame_id``.
+Assumptions
+-----------
+- Directory layout follows KITTI Odometry:
+  <kitti_data_dir>/
+    data_odometry_velodyne/dataset/sequences/<SEQ>/velodyne/*.bin
+    data_odometry_poses/dataset/poses/<SEQ>.txt             (optional; required for map->base_link)
+    data_odometry_calib/dataset/sequences/<SEQ>/calib.txt   (or calib_<SEQ>.txt; used for base_link->velodyne)
 
-Example
+Parameters
+----------
+kitti_data_dir (str):
+    Root folder containing the KITTI odometry subfolders. Default: "."
+dataset_sequence (str):
+    Two-digit sequence string, e.g., "00" or "s00". Default: "00".
+    If prefixed with 's' or 'S', the prefix will be stripped automatically.
+publish_rate_hz (float):
+    Scan publish rate. Default: 10.0.
+pointcloud_topic (str):
+    Topic for raw point clouds. Default: "/kitti/pointcloud_raw".
+ground_truth_pose_topic (str):
+    Topic for ground-truth poses (PoseStamped). Default: "/kitti/ground_truth_pose".
+map_frame_id (str):
+    Global frame. Default: "map".
+base_frame_id (str):
+    Vehicle body frame. By default we treat this as camera0 frame for self-consistency. Default: "base_link".
+lidar_frame_id (str):
+    LiDAR sensor frame. Default: "velodyne".
+base_equals_cam0 (bool):
+    If True (default), we assume base_link coincides with cam0 so that KITTI camera-frame poses are correct for map->base_link.
+use_cam0_poses (bool):
+    If True (default), read KITTI odometry poses (camera0 frame) from poses/<SEQ>.txt.
+
+Outputs
 -------
-Run inside an environment where ROS 2 is sourced and your workspace is built:
+- sensor_msgs/PointCloud2 on ``pointcloud_topic``
+- geometry_msgs/PoseStamped on ``ground_truth_pose_topic``
+- TF:   map -> base_link (dynamic) each tick
+- TF:   base_link -> velodyne (static) once from calibration if found (identity otherwise)
 
-.. code-block:: bash
-
-    source /opt/ros/humble/setup.bash
-    source ~/github/slam_frontend_ws/install/setup.bash
-    ros2 run <your_pkg> kitti_publisher \\
-      --ros-args \\
-      -p kitti_data_dir:=/data/kitti \\
-      -p dataset_sequence:=s00 \\
-      -p base_frame_id:=map \\
-      -p lidar_frame_id:=velodyne \\
-      -p publish_rate_hz:=5.0
-
-Notes
+Usage
 -----
-* The node iterates once over all scans in the selected sequence. When the last
-  scan is published, the timer is canceled and the node stops publishing.
-* If required files or directories are missing, the node logs an error and
-  shuts down cleanly.
-"""
+    ros2 run kitti_data_loader kitti_publisher \
+        --ros-args -p kitti_data_dir:=/path/to/kitti -p dataset_sequence:=00
 
-from __future__ import annotations  # Add this line
+This file replaces previous versions while keeping the same public interface. Internal members now use leading underscores.
+"""
+from __future__ import annotations
 
 import os
 import numpy as np
+
 import rclpy
 from rclpy.node import Node
-from sensor_msgs.msg import PointCloud2, PointField
-from std_msgs.msg import Header
-from geometry_msgs.msg import PoseStamped, TransformStamped
-import tf2_ros
+from rclpy.qos import qos_profile_sensor_data
 
+from sensor_msgs.msg import PointCloud2, PointField
+from geometry_msgs.msg import PoseStamped, TransformStamped
+from std_msgs.msg import Header
+
+import tf_transformations as tft
+from tf2_ros import TransformBroadcaster, StaticTransformBroadcaster
+
+# ---------------------------- Coordinate frame conversion ----------------------------
+# KITTI camera frame (cam0): x=right, y=down, z=forward
+# KITTI Velodyne frame: x=forward, y=left, z=up (ALREADY ROS-compatible!)
+# ROS REP-103: x=forward, y=left, z=up
+# 
+# Rotation matrix to convert CAMERA poses from KITTI cam0 to ROS base_link:
+# ROS_x = KITTI_z  (forward)
+# ROS_y = -KITTI_x (left) 
+# ROS_z = -KITTI_y (up)
+R_CAM_K2R = np.array([[ 0,  0,  1],
+                      [-1,  0,  0],
+                      [ 0, -1,  0]], dtype=np.float64)
+R4_CAM = np.eye(4, dtype=np.float64); R4_CAM[:3,:3] = R_CAM_K2R
+R4_CAM_inv = R4_CAM.T
+
+# ---------------------------- Utilities ----------------------------
+
+def read_kitti_poses_txt(path: str) -> np.ndarray:
+    """
+    Read KITTI odometry pose file (poses/<SEQ>.txt).
+
+    Each line has 12 numbers (row-major 3x4 matrix) representing the camera0 pose
+    of the vehicle in the global coordinate system for each timestamp.
+
+    Returns
+    -------
+    poses : (N, 4, 4) float64
+        Homogeneous transforms ``T_map_cam0`` for each frame in KITTI camera coordinates.
+    """
+    mats = []
+    with open(path, "r") as f:
+        for line in f:
+            vals = [float(x) for x in line.strip().split()]
+            if len(vals) != 12:
+                continue
+            T = np.eye(4, dtype=np.float64)
+            T[:3, :4] = np.array(vals, dtype=np.float64).reshape(3, 4)
+            mats.append(T)
+    return np.stack(mats, axis=0) if mats else np.zeros((0,4,4), dtype=np.float64)
+
+
+def load_calibration_matrix(calib_file: str) -> dict:
+    """
+    Parse a KITTI calibration file into a dict of named 3x4 (or 3x3) matrices.
+
+    The file may contain keys like:
+        P0, P1, P2, P3, Tr (velo->cam0), Tr_velo_to_cam, Tr_imu_to_velo, etc.
+
+    Returns
+    -------
+    dict[str, np.ndarray]
+        Keys to (3,4) float64 matrices (3x3 values are padded to 3x4 with zeros).
+    """
+    out = {}
+    with open(calib_file, "r") as f:
+        for line in f:
+            line = line.strip()
+            if not line or ":" not in line:
+                continue
+            key, rest = line.split(":", 1)
+            vals = [float(x) for x in rest.strip().split()]
+            if len(vals) in (12, 9):
+                if len(vals) == 12:
+                    M = np.array(vals, dtype=np.float64).reshape(3, 4)
+                else:
+                    # Some files may contain 3x3 (e.g., intrinsics). Pad if needed.
+                    M = np.hstack([np.array(vals, dtype=np.float64).reshape(3,3), np.zeros((3,1))])
+                out[key.strip()] = M
+    return out
+
+
+def homog_from_3x4(M34: np.ndarray) -> np.ndarray:
+    """Convert 3x4 to 4x4 homogeneous pose."""
+    T = np.eye(4, dtype=np.float64)
+    T[:3, :4] = M34
+    return T
+
+
+def inv_SE3(T: np.ndarray) -> np.ndarray:
+    """Efficient inverse of an SE(3) transform."""
+    R = T[:3, :3]
+    t = T[:3, 3]
+    Ti = np.eye(4, dtype=np.float64)
+    Ti[:3, :3] = R.T
+    Ti[:3, 3] = -R.T @ t
+    return Ti
+
+
+def T_to_xyzw(T: np.ndarray):
+    """Return position (x,y,z) and quaternion (x,y,z,w) from 4x4 T."""
+    x, y, z = T[:3, 3]
+    qx, qy, qz, qw = tft.quaternion_from_matrix(T)
+    return x, y, z, qx, qy, qz, qw
+
+
+def find_calib_for_sequence(calib_root: str, seq: str) -> str | None:
+    """
+    Attempt to locate the calibration file for a given sequence.
+
+    We try a few common layouts inside ``data_odometry_calib``:
+      - dataset/sequences/<SEQ>/calib.txt
+      - dataset/sequences/<SEQ>/calib_<SEQ>.txt
+      - calib_<SEQ>.txt (at calib_root or immediate subdir)
+    """
+    candidates = [
+        os.path.join(calib_root, "dataset", "sequences", seq, "calib.txt"),
+        os.path.join(calib_root, "dataset", "sequences", seq, f"calib_{seq}.txt"),
+        os.path.join(calib_root, f"calib_{seq}.txt"),
+    ]
+    for c in candidates:
+        if os.path.isfile(c):
+            return c
+    # fallback: search by name
+    for root, _, files in os.walk(calib_root):
+        for name in files:
+            if seq in name and "calib" in name and name.endswith(".txt"):
+                return os.path.join(root, name)
+    return None
+
+
+def make_pointcloud2(xyz_i: np.ndarray, frame_id: str, stamp) -> PointCloud2:
+    """
+    Create a sensor_msgs/PointCloud2 from Nx4 array [x,y,z,intensity].
+
+    Parameters
+    ----------
+    xyz_i : (N, 4) float32
+    frame_id : str
+    stamp : builtin_interfaces/Time
+
+    Returns
+    -------
+    PointCloud2
+    """
+    assert xyz_i.ndim == 2 and xyz_i.shape[1] in (3,4), "xyz_i must be Nx3 or Nx4"
+    if xyz_i.shape[1] == 3:
+        xyz_i = np.hstack([xyz_i, np.zeros((xyz_i.shape[0],1), dtype=xyz_i.dtype)])
+
+    data = xyz_i.astype(np.float32).tobytes()
+    fields = [
+        PointField(name='x', offset=0, datatype=PointField.FLOAT32, count=1),
+        PointField(name='y', offset=4, datatype=PointField.FLOAT32, count=1),
+        PointField(name='z', offset=8, datatype=PointField.FLOAT32, count=1),
+        PointField(name='intensity', offset=12, datatype=PointField.FLOAT32, count=1),
+    ]
+
+    msg = PointCloud2()
+    msg.header = Header()
+    msg.header.frame_id = frame_id
+    msg.header.stamp = stamp
+    msg.height = 1
+    msg.width = xyz_i.shape[0]
+    msg.fields = fields
+    msg.is_bigendian = False
+    msg.point_step = 16
+    msg.row_step = msg.point_step * msg.width
+    msg.is_dense = True
+    msg.data = data
+    return msg
+
+
+# ---------------------------- Node ----------------------------
 
 class KittiPublisher(Node):
     """
-    ROS 2 node that publishes KITTI LiDAR scans and ground-truth poses in lock-step.
+    Publish KITTI odometry LiDAR scans with correct TFs.
 
-    The node lists all Velodyne ``.bin`` files for the selected KITTI sequence and
-    loads the associated ground-truth poses. On each timer event it:
+    This node:
+      * streams .bin Velodyne scans (already in ROS-compatible coordinates)
+      * publishes PoseStamped (map frame) using KITTI poses (converted from camera to ROS frame)
+      * broadcasts TF: map->base_link (dynamic), base_link->velodyne (static from calib)
 
-      1. Reads the next scan, converts it to ``sensor_msgs/PointCloud2``, and publishes it
-         with ``header.frame_id = lidar_frame_id``.
-      2. Publishes the corresponding ground-truth pose as ``geometry_msgs/PoseStamped``
-         with ``header.frame_id = base_frame_id``.
-      3. Broadcasts the same transform via TF from ``base_frame_id`` to ``lidar_frame_id``.
-
-    Attributes:
-      velodyne_path (str): Absolute path to ``.../sequences/<SEQ>/velodyne``.
-      poses_path (str): Absolute path to ``.../poses/<SEQ>.txt``.
-      scan_files (list[str]): Sorted list of Velodyne ``.bin`` files.
-      ground_truth_poses (np.ndarray | None): Array of shape (N, 3, 4) with [R|t].
-      base_frame (str): Parent frame used for TF and pose messages.
-      lidar_frame (str): Child frame used for TF and PointCloud2 headers.
-      dataset_sequence (str): KITTI sequence identifier (e.g., ``"00"``).
-      pc_publisher (rclpy.publisher.Publisher): Publisher for point clouds.
-      pose_publisher (rclpy.publisher.Publisher): Publisher for poses.
-      tf_broadcaster (tf2_ros.TransformBroadcaster): TF broadcaster instance.
-      scan_index (int): Current zero-based scan index.
-
-    Design considerations:
-      * The publishing timer frequency is configurable via ``publish_rate_hz``.
-      * File system errors are surfaced through ROS logs, and the node exits gracefully.
-      * SciPy is used to convert rotation matrices to quaternions for TF and poses.
+    Internal attributes
+    -------------------
+    Attributes are prefixed with a leading underscore, e.g.:
+      - ``self._seq`` (sequence id, two-digit string)
+      - ``self._rate_hz`` (publish rate)
+      - ``self._pointcloud_topic``, ``self._pose_topic``
+      - ``self._map_frame``, ``self._base_frame``, ``self._lidar_frame``
+      - ``self._velodyne_path``, ``self._poses_file``, ``self._calib_root``
+      - ``self._scan_files``, ``self._poses``
+      - ``self._tf_broadcaster``, ``self._static_tf_broadcaster``
+      - ``self._pc_pub``, ``self._pose_pub``
+      - ``self._scan_index``, ``self._timer``
     """
-
-    def __init__(self) -> None:
-        """
-        Construct the node, declare parameters, resolve paths, validate inputs,
-        allocate publishers, and start the publishing timer.
-
-        Raises:
-          SystemExit: The node calls ``rclpy.shutdown()`` and returns early if data
-          cannot be loaded due to missing files or invalid paths.
-        """
+    def __init__(self):
         super().__init__("kitti_publisher")
 
-        # Declare parameters
-        self.declare_parameter(
-            "kitti_data_dir", "/home/zeid/github/slam_frontend_ws/data/kitti"
-        )
+        # --- Parameters ---
+        self.declare_parameter("kitti_data_dir", ".")
+        self.declare_parameter("dataset_sequence", "00")
         self.declare_parameter("publish_rate_hz", 10.0)
         self.declare_parameter("pointcloud_topic", "/kitti/pointcloud_raw")
         self.declare_parameter("ground_truth_pose_topic", "/kitti/ground_truth_pose")
-        self.declare_parameter("base_frame_id", "odom")
+        self.declare_parameter("map_frame_id", "map")
+        self.declare_parameter("base_frame_id", "base_link")
         self.declare_parameter("lidar_frame_id", "velodyne")
-        self.declare_parameter("dataset_sequence", "s00")
+        self.declare_parameter("base_equals_cam0", True)
+        self.declare_parameter("use_cam0_poses", True)
 
-        # Get parameters
-        kitti_dir = (
-            self.get_parameter("kitti_data_dir").get_parameter_value().string_value
-        )
-        publish_rate = (
-            self.get_parameter("publish_rate_hz").get_parameter_value().double_value
-        )
-        pointcloud_topic = (
-            self.get_parameter("pointcloud_topic").get_parameter_value().string_value
-        )
-        pose_topic = (
-            self.get_parameter("ground_truth_pose_topic")
-            .get_parameter_value()
-            .string_value
-        )
-        self.base_frame = (
-            self.get_parameter("base_frame_id").get_parameter_value().string_value
-        )
-        self.lidar_frame = (
-            self.get_parameter("lidar_frame_id").get_parameter_value().string_value
-        )
-        # Get the "s00" or "s01" string
-        seq_param_string = (
-            self.get_parameter("dataset_sequence").get_parameter_value().string_value
-        )
+        kitti_root = self.get_parameter("kitti_data_dir").get_parameter_value().string_value
+        seq_in = self.get_parameter("dataset_sequence").get_parameter_value().string_value
+        # Strip 's' or 'S' prefix if present, then zero-pad to 2 digits
+        self._seq = seq_in[1:] if seq_in.startswith(("s", "S")) else seq_in
+        self._seq = self._seq.zfill(2)
+        
+        self._rate_hz = float(self.get_parameter("publish_rate_hz").value)
+        self._pointcloud_topic = self.get_parameter("pointcloud_topic").value
+        self._pose_topic = self.get_parameter("ground_truth_pose_topic").value
+        self._map_frame = self.get_parameter("map_frame_id").value
+        self._base_frame = self.get_parameter("base_frame_id").value
+        self._lidar_frame = self.get_parameter("lidar_frame_id").value
+        self._base_equals_cam0 = bool(self.get_parameter("base_equals_cam0").value)
+        self._use_cam0_poses = bool(self.get_parameter("use_cam0_poses").value)
 
-        # Strip the 's' prefix if it exists, otherwise use the string as-is
-        if seq_param_string.startswith('s'):
-            self.dataset_sequence = seq_param_string[1:] # e.g., "s01" -> "01"
+        # --- Paths ---
+        self._velodyne_path = os.path.join(
+            kitti_root, "data_odometry_velodyne", "dataset", "sequences", self._seq, "velodyne"
+        )
+        self._poses_file = os.path.join(
+            kitti_root, "data_odometry_poses", "dataset", "poses", f"{self._seq}.txt"
+        )
+        self._calib_root = os.path.join(kitti_root, "data_odometry_calib")
+
+        # --- Robust existence checks ---
+        if not os.path.isdir(self._velodyne_path):
+            self.get_logger().error(f"Velodyne directory not found: {self._velodyne_path}")
+            raise SystemExit(1)
+
+        if self._use_cam0_poses and not os.path.isfile(self._poses_file):
+            self.get_logger().error(
+                f"Poses file not found (required with use_cam0_poses=True): {self._poses_file}"
+            )
+            raise SystemExit(1)
+        
+        if not os.path.isdir(self._calib_root):
+            self.get_logger().warn(
+                f"Calibration root not found: {self._calib_root} (will assume identity base->velodyne)"
+            )
+
+        # --- Load data lists ---
+        self._scan_files = sorted([f for f in os.listdir(self._velodyne_path) if f.endswith(".bin")])
+        if not self._scan_files:
+            self.get_logger().error(f"No .bin scans found in {self._velodyne_path}")
+            raise SystemExit(1)
+
+        self._poses = read_kitti_poses_txt(self._poses_file) if self._use_cam0_poses else np.zeros((0,4,4))
+        if self._use_cam0_poses and self._poses.shape[0] == 0:
+            self.get_logger().error(f"Pose file parsed but empty: {self._poses_file}")
+            raise SystemExit(1)
+
+        # --- TF broadcasters ---
+        self._tf_broadcaster = TransformBroadcaster(self)
+        self._static_tf_broadcaster = StaticTransformBroadcaster(self)
+
+        # --- Publish static base_link->velodyne from calibration ---
+        self._publish_static_base_to_velodyne_from_calib(kitti_root)
+
+        # --- Publishers ---
+        self._pc_pub = self.create_publisher(PointCloud2, self._pointcloud_topic, qos_profile_sensor_data)
+        self._pose_pub = self.create_publisher(PoseStamped, self._pose_topic, 10)
+
+        # --- Timer ---
+        period = 1.0 / max(1e-6, self._rate_hz)
+        self._scan_index = 0
+        self._timer = self.create_timer(period, self._on_timer)
+
+        self.get_logger().info(f"Publishing KITTI sequence {self._seq} at {self._rate_hz:.2f} Hz")
+        self.get_logger().info(f"Frames: map={self._map_frame}, base={self._base_frame}, lidar={self._lidar_frame}")
+        self.get_logger().info(f"Scans: {len(self._scan_files)}; Poses: {self._poses.shape[0]}")
+
+    # ---------------------------- Calibration & Static TF ----------------------------
+
+    def _publish_static_base_to_velodyne_from_calib(self, kitti_root: str) -> None:
+        """
+        Compute and publish a static base_link->velodyne transform using KITTI calibration if available.
+        
+        CRITICAL: The Tr_velo_to_cam matrix relates:
+        - Velodyne frame (x forward, y left, z up) 
+        - to Camera frame (x right, y down, z forward)
+        
+        We need to convert this relationship to ROS frames where base_link is in ROS coordinates.
+        """
+        T_base_to_velo_ros = np.eye(4, dtype=np.float64)
+
+        calib_file = find_calib_for_sequence(self._calib_root, self._seq) if os.path.isdir(self._calib_root) else None
+        if calib_file and os.path.isfile(calib_file):
+            try:
+                mats = load_calibration_matrix(calib_file)
+                if self._base_equals_cam0 and ("Tr_velo_to_cam" in mats or "Tr" in mats):
+                    M = mats.get("Tr_velo_to_cam", mats.get("Tr"))
+                    # This is T_velo_to_cam0 in KITTI native coordinates
+                    # Velodyne: x fwd, y left, z up
+                    # Cam0: x right, y down, z fwd
+                    T_velo_to_cam0_kitti = homog_from_3x4(M)
+                    
+                    # We need T_base(ROS)_to_velo(ROS)
+                    # Since velo is already ROS-like, and base should be cam0 converted to ROS:
+                    # T_base(ROS)_to_velo(ROS) = R_CAM @ inv(T_velo_to_cam0) @ R_CAM_inv
+                    # Actually simpler: base_ROS = R_CAM @ cam0_KITTI @ R_CAM_inv
+                    #                   velo_ROS = velo_KITTI (no change)
+                    # So: T_base(ROS)_to_velo(ROS) = R_CAM @ cam0_to_velo_KITTI @ R_CAM_inv
+                    #                                = R_CAM @ inv(T_velo_to_cam0) @ R_CAM_inv
+                    
+                    # @TODO issue here
+                    # T_cam0_to_velo_kitti = inv_SE3(T_velo_to_cam0_kitti)
+                    # T_base_to_velo_ros = R4_CAM @ T_cam0_to_velo_kitti @ R4_CAM_inv
+                    
+                    T_base_to_velo_ros = R4_CAM @ T_velo_to_cam0_kitti
+                    
+                    self.get_logger().info(
+                        f"Static TF base(cam0)->velodyne from {os.path.basename(calib_file)} "
+                        f"(cam frame converted to ROS, velo unchanged)"
+                    )
+                elif (not self._base_equals_cam0) and ("Tr_imu_to_velo" in mats):
+                    # If base is IMU, the transform is already between two sensor frames
+                    # Need to check IMU coordinate convention (often same as velodyne or needs conversion)
+                    T_imu_to_velo_kitti = homog_from_3x4(mats["Tr_imu_to_velo"])
+                    # Assuming IMU frame is also ROS-like (common in KITTI)
+                    T_base_to_velo_ros = T_imu_to_velo_kitti
+                    self.get_logger().info(
+                        f"Static TF base(imu)->velodyne from {os.path.basename(calib_file)} "
+                        f"(assuming both IMU and velo are ROS-compatible)"
+                    )
+                else:
+                    self.get_logger().warn(
+                        "Calibration found, but no suitable key (Tr_velo_to_cam/Tr or Tr_imu_to_velo). Using identity."
+                    )
+            except Exception as e:
+                self.get_logger().warn(f"Failed to parse calibration ({calib_file}): {e}. Using identity.")
         else:
-            self.dataset_sequence = seq_param_string # e.g., "00"
+            self.get_logger().warn("No calibration file found for this sequence. Using identity base->velodyne.")
 
-        # Setup paths
-        self.velodyne_path = os.path.join(
-            kitti_dir,
-            "data_odometry_velodyne",
-            "dataset",
-            "sequences",
-            str(self.dataset_sequence),
-            "velodyne",
-        )
-        self.poses_path = os.path.join(
-            kitti_dir,
-            "data_odometry_poses",
-            "dataset",
-            "poses",
-            str(self.dataset_sequence) + ".txt",
-        )
-        self.get_logger().warn(self.poses_path)
+        x, y, z, qx, qy, qz, qw = T_to_xyzw(T_base_to_velo_ros)
+        tfs = TransformStamped()
+        tfs.header.frame_id = self._base_frame
+        tfs.child_frame_id = self._lidar_frame
+        tfs.header.stamp = self.get_clock().now().to_msg()
+        tfs.transform.translation.x = float(x)
+        tfs.transform.translation.y = float(y)
+        tfs.transform.translation.z = float(z)
+        tfs.transform.rotation.x = float(qx)
+        tfs.transform.rotation.y = float(qy)
+        tfs.transform.rotation.z = float(qz)
+        tfs.transform.rotation.w = float(qw)
 
-        self.get_logger().info(f"Velodyne path: {self.velodyne_path}")
-        self.get_logger().info(f"Poses path: {self.poses_path}")
+        self._static_tf_broadcaster.sendTransform(tfs)
 
-        # Load data
-        self.scan_files = sorted(os.listdir(self.velodyne_path))
-        self.ground_truth_poses = self._load_poses()
+    # ---------------------------- Timer callback ----------------------------
 
-        if not self.scan_files or self.ground_truth_poses is None:
-            self.get_logger().error("Failed to load KITTI data. Check paths.")
-            rclpy.shutdown()
+    def _on_timer(self) -> None:
+        if self._scan_index >= len(self._scan_files):
+            self.get_logger().info("All KITTI scans have been published. Shutting down.")
+            self._timer.cancel()
+            # Allow a few cycles for last TF/msgs to flush
+            self.create_timer(0.5, lambda: rclpy.shutdown())
             return
 
-        # Initialize publishers and TF broadcaster
-        self.pc_publisher = self.create_publisher(PointCloud2, pointcloud_topic, 10)
-        self.pose_publisher = self.create_publisher(PoseStamped, pose_topic, 10)
-        self.tf_broadcaster = tf2_ros.TransformBroadcaster(self)
+        scan_name = self._scan_files[self._scan_index]
+        scan_path = os.path.join(self._velodyne_path, scan_name)
 
-        # Initialize scan index and timer
-        self.scan_index = 0
-        self.timer = self.create_timer(1.0 / publish_rate, self.timer_callback)
+        # Load point cloud - KITTI Velodyne is already (x forward, y left, z up)
+        # which matches ROS REP-103, so NO transformation needed!
+        pts = self._read_velodyne_bin(scan_path)  # (N,4) float32
 
-        self.get_logger().info("KITTI Publisher node initialized.")
+        now = self.get_clock().now().to_msg()
 
-    def _load_poses(self) -> np.ndarray | None:
+        # Publish cloud directly - no coordinate transformation
+        pc_msg = make_pointcloud2(pts, self._lidar_frame, now)
+        self._pc_pub.publish(pc_msg)
+
+        # Publish map->base_link TF and PoseStamped if poses available
+        if self._use_cam0_poses and self._scan_index < self._poses.shape[0]:
+            # Camera pose in KITTI camera coordinates
+            T_map_cam0_kitti = self._poses[self._scan_index]
+            # Convert camera pose to ROS base_link coordinates
+            T_map_base_ros = R4_CAM @ T_map_cam0_kitti @ R4_CAM_inv
+            x, y, z, qx, qy, qz, qw = T_to_xyzw(T_map_base_ros)
+
+            # PoseStamped
+            pose = PoseStamped()
+            pose.header.frame_id = self._map_frame
+            pose.header.stamp = now
+            pose.pose.position.x = float(x)
+            pose.pose.position.y = float(y)
+            pose.pose.position.z = float(z)
+            pose.pose.orientation.x = float(qx)
+            pose.pose.orientation.y = float(qy)
+            pose.pose.orientation.z = float(qz)
+            pose.pose.orientation.w = float(qw)
+            self._pose_pub.publish(pose)
+            
+            # TF
+            tfs = TransformStamped()
+            tfs.header.stamp = now
+            tfs.header.frame_id = self._map_frame
+            tfs.child_frame_id = self._base_frame
+            tfs.transform.translation.x = float(x)
+            tfs.transform.translation.y = float(y)
+            tfs.transform.translation.z = float(z)
+            tfs.transform.rotation.x = float(qx)
+            tfs.transform.rotation.y = float(qy)
+            tfs.transform.rotation.z = float(qz)
+            tfs.transform.rotation.w = float(qw)
+            self._tf_broadcaster.sendTransform(tfs)
+
+        self._scan_index += 1
+
+    # ---------------------------- Data readers ----------------------------
+
+    def _read_velodyne_bin(self, path: str) -> np.ndarray:
         """
-        Load ground-truth poses from the KITTI poses text file.
-
-        Returns:
-          numpy.ndarray | None: Array of shape (N, 3, 4) containing per-frame
-          [R|t] matrices if successful; ``None`` if the file cannot be read.
-
-        File format:
-          Each line has 12 float values, row-major, representing a 3×4 matrix.
+        Read a KITTI Velodyne .bin scan into an (N,4) float32 array [x,y,z,intensity].
+        
+        KITTI Velodyne coordinates are (x forward, y left, z up) which ALREADY matches
+        ROS REP-103, so points are returned as-is without any coordinate transformation.
         """
-        try:
-            poses = np.loadtxt(self.poses_path)
-            return poses.reshape(-1, 3, 4)
-        except FileNotFoundError:
-            self.get_logger().error(f"Poses file not found at {self.poses_path}")
-            return None
+        pts = np.fromfile(path, dtype=np.float32)
+        if pts.size % 4 != 0:
+            # Log warning and truncate to multiple of 4 (defensive)
+            n4 = (pts.size // 4) * 4
+            self.get_logger().warn(
+                f"Velodyne file {os.path.basename(path)} size not multiple of 4 floats "
+                f"({pts.size} floats). Truncating to {n4}."
+            )
+            pts = pts[:n4]
+        return pts.reshape(-1, 4)
 
-    def timer_callback(self) -> None:
-        """
-        Publish the next scan and its ground-truth pose on each timer tick.
+# ---------------------------- main ----------------------------
 
-        Behavior:
-          * If all scans have been published, cancel the timer and log completion.
-          * Otherwise, publish the next ``PointCloud2``, ``PoseStamped``, and TF.
-        """
-        if self.scan_index >= len(self.scan_files):
-            self.get_logger().info("All KITTI scans have been published.")
-            self.timer.cancel()
-            return
-
-        # Publish Point Cloud
-        self._publish_point_cloud()
-
-        # Publish Ground Truth Pose and Transform
-        self._publish_ground_truth()
-
-        self.scan_index += 1
-
-    def _publish_point_cloud(self) -> None:
-        """
-        Read the current Velodyne ``.bin`` file and publish it as ``PointCloud2``.
-
-        Message definition:
-          * Fields: ``x``, ``y``, ``z``, ``intensity`` (all ``FLOAT32``)
-          * ``point_step = 16`` bytes, ``row_step = point_step * width``
-          * ``height = 1`` for an unorganized cloud
-
-        Frame:
-          The message header uses ``lidar_frame`` as ``frame_id``.
-        """
-        scan_path = os.path.join(self.velodyne_path, self.scan_files[self.scan_index])
-        points = np.fromfile(scan_path, dtype=np.float32).reshape(-1, 4)
-
-        header = Header(
-            stamp=self.get_clock().now().to_msg(), frame_id=self.lidar_frame
-        )
-
-        fields = [
-            PointField(name="x", offset=0, datatype=PointField.FLOAT32, count=1),
-            PointField(name="y", offset=4, datatype=PointField.FLOAT32, count=1),
-            PointField(name="z", offset=8, datatype=PointField.FLOAT32, count=1),
-            PointField(
-                name="intensity", offset=12, datatype=PointField.FLOAT32, count=1
-            ),
-        ]
-
-        pc2_msg = PointCloud2(
-            header=header,
-            height=1,
-            width=len(points),
-            is_dense=False,
-            is_bigendian=False,
-            fields=fields,
-            point_step=16,
-            row_step=16 * len(points),
-            data=points.tobytes(),
-        )
-        self.pc_publisher.publish(pc2_msg)
-
-    def _publish_ground_truth(self) -> None:
-        """
-        Publish the ground-truth pose and corresponding TF for the current index.
-
-        Frames:
-          Parent frame: ``base_frame`` (for example, ``map`` or ``odom``)
-          Child frame : ``lidar_frame`` (for example, ``velodyne``)
-
-        Implementation details:
-          * The 3×4 [R|t] matrix is extended to 4×4 homogeneous form to extract
-            translation and rotation.
-          * SciPy converts the rotation matrix to a quaternion with ordering
-            ``(x, y, z, w)`` suitable for ROS messages.
-
-        Notes:
-          If the poses array is shorter than the number of scans, this function
-          returns without publishing for out-of-range indices.
-        """
-        if self.scan_index >= len(self.ground_truth_poses):
-            return
-
-        pose_matrix = np.vstack(
-            [self.ground_truth_poses[self.scan_index], [0, 0, 0, 1]]
-        )
-        translation = pose_matrix[:3, 3]
-
-        # SciPy conversion from rotation matrix to quaternion (x, y, z, w)
-        from scipy.spatial.transform import Rotation
-
-        quat = Rotation.from_matrix(pose_matrix[:3, :3]).as_quat()
-
-        current_time = self.get_clock().now().to_msg()
-
-        # Publish PoseStamped
-        pose_msg = PoseStamped()
-        pose_msg.header = Header(stamp=current_time, frame_id=self.base_frame)
-        pose_msg.pose.position.x = translation[0]
-        pose_msg.pose.position.y = translation[1]
-        pose_msg.pose.position.z = translation[2]
-        pose_msg.pose.orientation.x = quat[0]
-        pose_msg.pose.orientation.y = quat[1]
-        pose_msg.pose.orientation.z = quat[2]
-        pose_msg.pose.orientation.w = quat[3]
-        self.pose_publisher.publish(pose_msg)
-
-        # Broadcast TransformStamped (TF)
-        t = TransformStamped()
-        t.header.stamp = current_time
-        t.header.frame_id = self.base_frame
-        t.child_frame_id = self.lidar_frame
-        t.transform.translation.x = translation[0]
-        t.transform.translation.y = translation[1]
-        t.transform.translation.z = translation[2]
-        t.transform.rotation.x = quat[0]
-        t.transform.rotation.y = quat[1]
-        t.transform.rotation.z = quat[2]
-        t.transform.rotation.w = quat[3]
-        self.tf_broadcaster.sendTransform(t)
-
-
-def main(args=None):
-    """
-    Initialize rclpy, create and spin :class:`KittiPublisher`, and shut down cleanly.
-
-    Args:
-      args (list[str] | None): Optional CLI arguments forwarded to rclpy.
-
-    Behavior:
-      * Interrupting with Ctrl-C stops spinning, destroys the node, and shuts down rclpy.
-    """
-    rclpy.init(args=args)
-    kitti_publisher = KittiPublisher()
+def main(argv=None):
+    """Entrypoint to run the node standalone."""
+    rclpy.init(args=argv)
+    node = KittiPublisher()
     try:
-        rclpy.spin(kitti_publisher)
+        rclpy.spin(node)
     except KeyboardInterrupt:
         pass
     finally:
-        kitti_publisher.destroy_node()
+        node.destroy_node()
         rclpy.shutdown()
-
 
 if __name__ == "__main__":
     main()

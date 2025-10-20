@@ -31,7 +31,7 @@ def generate_launch_description():
     # A more advanced method could parse the YAML, but this is clearer.
     declare_kitti_data_dir_arg = DeclareLaunchArgument(
         "kitti_data_dir",
-        default_value="/home/zeid/github/slam_frontend_ws/data/kitti",
+        default_value=".",
         description="Root folder of the KITTI dataset",
     )
 
@@ -61,7 +61,7 @@ def generate_launch_description():
 
     declare_base_frame_id_arg = DeclareLaunchArgument(
         "base_frame_id",
-        default_value="odom",
+        default_value="base_link",
         description="Parent frame (e.g., odom or map)",
     )
 
@@ -75,7 +75,7 @@ def generate_launch_description():
     kitti_publisher_node = Node(
         package="kitti_data_loader",
         executable="kitti_publisher",
-        name="kitti_publisher_node",
+        name="kitti_publisher",
         output="screen",
         # The 'parameters' list loads defaults from the YAML file first,
         # then applies overrides from the launch arguments.
@@ -83,7 +83,6 @@ def generate_launch_description():
             config_file,  # Load all defaults from YAML
             {
                 # Apply overrides from launch arguments
-                "kitti_data_dir": LaunchConfiguration("kitti_data_dir"),
                 "dataset_sequence": LaunchConfiguration("dataset_sequence"),
                 "publish_rate_hz": LaunchConfiguration("publish_rate_hz"),
                 "pointcloud_topic": LaunchConfiguration("pointcloud_topic"),

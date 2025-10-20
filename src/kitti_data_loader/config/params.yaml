@@ -1,10 +1,23 @@
-kitti_publisher_node:
+/kitti_publisher:
   ros__parameters:
-    # IMPORTANT: Update this to the absolute path of your workspace
-    kitti_data_dir: '/home/zeid/github/slam_frontend_ws/data/kitti' 
-    dataset_sequence: 's00' 
+    # Root KITTI data directory
+    kitti_data_dir: /home/zeidk/github/slam_frontend_ws/data/kitti
+
+    # Sequence ID (either "00" or "s00")
+    dataset_sequence: s00
+
+    # Publish rate (Hz)
     publish_rate_hz: 10.0
-    pointcloud_topic: '/kitti/pointcloud_raw'
-    ground_truth_pose_topic: '/kitti/ground_truth_pose'
-    base_frame_id: 'odom'
-    lidar_frame_id: 'velodyne'
+
+    # Topics
+    pointcloud_topic: /kitti/pointcloud_raw
+    ground_truth_pose_topic: /kitti/ground_truth_pose
+
+    # Frames
+    map_frame_id: map
+    base_frame_id: base_link
+    lidar_frame_id: velodyne
+
+    # KITTI semantics
+    base_equals_cam0: true
+    use_cam0_poses: true
