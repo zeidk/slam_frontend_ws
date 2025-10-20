@@ -80,5 +80,5 @@ autodoc_default_options = {
 source_suffix = {".rst": "restructuredtext", ".md": "markdown"}
 
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
-# html_theme = "sphinx_rtd_theme"
-html_theme = "furo"
+html_theme = "sphinx_rtd_theme"
+# html_theme = "furo"
