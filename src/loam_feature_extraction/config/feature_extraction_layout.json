@@ -1,0 +1,281 @@
+{
+  "configById": {
+    "3D!raw": {
+      "cameraState": {
+        "perspective": true,
+        "distance": 19.99999999999989,
+        "phi": 65.00000000000003,
+        "thetaOffset": -45.00000000000018,
+        "targetOffset": [
+          0,
+          0,
+          0
+        ],
+        "target": [
+          0,
+          0,
+          0
+        ],
+        "targetOrientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "fovy": 45,
+        "near": 0.5,
+        "far": 5000
+      },
+      "followMode": "follow-pose",
+      "followTf": "base_link",
+      "scene": {
+        "backgroundColor": "#1a1a1a",
+        "transforms": {
+          "showLabel": false
+        }
+      },
+      "topics": {
+        "/kitti/pointcloud_raw": {
+          "visible": true,
+          "colorField": "intensity",
+          "colorMode": "colormap",
+          "colorMap": "turbo",
+          "pointSize": 2,
+          "pointShape": "circle",
+          "decayTime": 0
+        },
+        "/kitti/ground_truth_pose": {
+          "visible": true,
+          "type": "arrow"
+        }
+      },
+      "layers": {
+        "grid": {
+          "visible": true,
+          "frameLocked": true,
+          "size": 10,
+          "divisions": 10,
+          "lineWidth": 1,
+          "color": "#808080ff",
+          "frameId": "base_link"
+        }
+      },
+      "publish": {
+        "type": "point",
+        "poseTopic": "/move_base_simple/goal",
+        "pointTopic": "/clicked_point",
+        "poseEstimateTopic": "/initialpose",
+        "poseEstimateXDeviation": 0.5,
+        "poseEstimateYDeviation": 0.5,
+        "poseEstimateThetaDeviation": 0.26179939
+      },
+      "imageMode": {},
+      "transforms": {}
+    },
+    "3D!downsampled": {
+      "cameraState": {
+        "distance": 20,
+        "perspective": true,
+        "phi": 75,
+        "target": [
+          0,
+          0,
+          0
+        ],
+        "targetOffset": [
+          0,
+          0,
+          0
+        ],
+        "targetOrientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "thetaOffset": 35,
+        "fovy": 45,
+        "near": 0.5,
+        "far": 5000
+      },
+      "followMode": "follow-pose",
+      "followTf": "velodyne",
+      "scene": {
+        "backgroundColor": "#1a1a1a",
+        "transforms": {
+          "showLabel": false
+        },
+        "syncCamera": false
+      },
+      "topics": {
+        "/preprocessing/downsampled_cloud": {
+          "visible": true,
+          "colorField": "intensity",
+          "colorMode": "colormap",
+          "colorMap": "turbo",
+          "pointSize": 3,
+          "pointShape": "circle",
+          "decayTime": 0
+        }
+      },
+      "layers": {
+        "grid": {
+          "visible": true
+        }
+      },
+      "publish": {
+        "type": "point",
+        "poseTopic": "/move_base_simple/goal",
+        "pointTopic": "/clicked_point",
+        "poseEstimateTopic": "/initialpose",
+        "poseEstimateXDeviation": 0.5,
+        "poseEstimateYDeviation": 0.5,
+        "poseEstimateThetaDeviation": 0.26179939
+      },
+      "imageMode": {},
+      "transforms": {}
+    },
+    "3D!features": {
+      "cameraState": {
+        "perspective": true,
+        "distance": 22.752003691056903,
+        "phi": 79.99999999999993,
+        "thetaOffset": 15.00000000000062,
+        "targetOffset": [
+          -0.02534007183106296,
+          0.006789851783280011,
+          0
+        ],
+        "target": [
+          0,
+          0,
+          0
+        ],
+        "targetOrientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "fovy": 45,
+        "near": 0.5,
+        "far": 5000
+      },
+      "followMode": "follow-pose",
+      "followTf": "base_link",
+      "scene": {
+        "backgroundColor": "#1a1a1a",
+        "transforms": {
+          "showLabel": false
+        }
+      },
+      "topics": {
+        "/features/edge_cloud": {
+          "visible": true,
+          "colorMode": "colormap",
+          "pointSize": 18,
+          "pointShape": "square",
+          "decayTime": 0,
+          "colorField": "intensity",
+          "colorMap": "turbo"
+        },
+        "/features/planar_cloud": {
+          "visible": true,
+          "colorMode": "gradient",
+          "pointSize": 7,
+          "pointShape": "circle",
+          "decayTime": 0,
+          "colorField": "intensity",
+          "colorMap": "turbo"
+        }
+      },
+      "layers": {
+        "grid": {
+          "visible": true
+        }
+      },
+      "publish": {
+        "type": "point",
+        "poseTopic": "/move_base_simple/goal",
+        "pointTopic": "/clicked_point",
+        "poseEstimateTopic": "/initialpose",
+        "poseEstimateXDeviation": 0.5,
+        "poseEstimateYDeviation": 0.5,
+        "poseEstimateThetaDeviation": 0.26179939
+      },
+      "imageMode": {},
+      "transforms": {}
+    },
+    "Plot!counts": {
+      "paths": [
+        {
+          "value": "/kitti/pointcloud_raw.width",
+          "enabled": true,
+          "timestampMethod": "receiveTime",
+          "label": "raw.width"
+        },
+        {
+          "value": "/preprocessing/downsampled_cloud.width",
+          "enabled": true,
+          "timestampMethod": "receiveTime",
+          "label": "downsampled.width"
+        },
+        {
+          "value": "/features/edge_cloud.width",
+          "enabled": true,
+          "timestampMethod": "receiveTime",
+          "label": "edge.width"
+        },
+        {
+          "value": "/features/planar_cloud.width",
+          "enabled": true,
+          "timestampMethod": "receiveTime",
+          "label": "planar.width"
+        }
+      ],
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "showPlotValuesInLegend": false,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "sidebarDimension": 260,
+      "xAxisLabel": "timestamp",
+      "yAxisLabel": "count"
+    },
+    "TransformTree!tf": {},
+    "TopicGraph!graph": {}
+  },
+  "globalVariables": {},
+  "userNodes": {},
+  "playbackConfig": {
+    "speed": 1
+  },
+  "layout": {
+    "direction": "column",
+    "splitPercentage": 70,
+    "first": {
+      "direction": "row",
+      "splitPercentage": 60,
+      "first": {
+        "direction": "row",
+        "splitPercentage": 50,
+        "first": "3D!raw",
+        "second": "3D!downsampled"
+      },
+      "second": {
+        "direction": "row",
+        "splitPercentage": 50,
+        "first": "3D!features",
+        "second": {
+          "direction": "column",
+          "splitPercentage": 50,
+          "first": "TransformTree!tf",
+          "second": "TopicGraph!graph"
+        }
+      }
+    },
+    "second": "Plot!counts"
+  }
+}

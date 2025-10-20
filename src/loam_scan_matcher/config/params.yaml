@@ -1,10 +1,21 @@
 loam_scan_matcher:
   ros__parameters:
+    # Input topics from feature extractor
     edge_topic: "features/edge_cloud"
     planar_topic: "features/planar_cloud"
-    voxel_size: 0.2
-    max_icp_iter: 20
-    icp_dist_thresh: 1.0
-    knn_normals: 20
-    frame_odom: "odom"
-    frame_base: "base_link"
+
+    # ICP parameters
+    voxel_size: 0.2              # Voxel downsample size (meters)
+    max_icp_iter: 20             # Maximum ICP iterations per frame
+    icp_dist_thresh: 1.0         # Distance threshold for correspondence (meters)
+    knn_normals: 20              # k-NN for normal estimation
+
+    # Frame IDs (must match KITTI publisher and other nodes)
+    # Use 'map' as reference frame (from KITTI ground truth)
+    # No separate odom frame; publish directly to map
+    frame_map: "map"             # Global reference frame
+    frame_base: "base_link"      # Robot base link frame
+
+    # Output topics
+    odom_topic: "scan_match/odometry"
+    trajectory_topic: "scan_match/trajectory"

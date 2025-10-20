@@ -33,7 +33,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'scan_matcher = loam_scan_matcher.scan_matcher:main',
+            'loam_scan_matcher = loam_scan_matcher.scan_matcher:main',
         ],
     },
 )

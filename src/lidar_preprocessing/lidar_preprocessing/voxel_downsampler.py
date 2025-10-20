@@ -17,23 +17,6 @@ Design Goals
         - Publishes with RELIABLE QoS by default for easy `ros2 topic echo`.
         - Subscribes using the standard `qos_profile_sensor_data`.
 
-Parameters (declare with ROS 2 parameters)
-------------------------------------------
-  input_topic (str):
-    Topic for incoming raw point clouds. Default: ``"kitti/raw_cloud"``.
-  output_topic (str):
-      Topic for the published downsampled cloud. Default: ``"/preprocessing/downsampled_cloud"``.
-  voxel_size (float):
-      Edge length in meters for the cubic voxels. Must be positive. Default: ``0.2``.
-  min_points_per_voxel (int):
-      Minimum number of points required within a voxel to keep its centroid. Default: ``1``.
-  filter_ground (bool):
-      If True, discard points with z <= ground_threshold before downsampling. Default: ``False``.
-  ground_threshold (float):
-      Z height threshold (meters) used when ``filter_ground`` is True. Default: ``-1.2``.
-  output_qos_reliability (str):
-      Reliability setting for the publisher ("reliable" or "best_effort"). Default: ``"reliable"``.
-
 Published Interfaces
 --------------------
   * ``sensor_msgs/PointCloud2`` on ``output_topic``:

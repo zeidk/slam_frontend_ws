@@ -1,59 +1,5 @@
 #!/usr/bin/env python3
-"""
-kitti_publisher.py
-========================
 
-ROS 2 node that publishes KITTI Odometry LiDAR scans and ground-truth poses with **correct TF semantics**,
-sensor QoS for point clouds, and robust file/directory checks.
-
-Naming convention
------------------
-All **class data members** use a **leading underscore** to indicate internal attributes (e.g., ``self._seq``, ``self._scan_files``).
-This applies to variables initialized in ``__init__`` such as frames, topics, paths, publishers, and TF broadcasters.
-
-Key behavior
-------------
-**Coordinate system conversion (CRITICAL):**
-- KITTI Camera (cam0): x=right, y=down, z=forward
-- KITTI Velodyne: x=forward, y=left, z=up (ALREADY MATCHES ROS REP-103!)
-- ROS REP-103: x=forward, y=left, z=up
-
-The rotation R_K2R is ONLY applied to:
-1. Camera poses from poses/<SEQ>.txt (converting cam0 frame to ROS base_link frame)
-2. The Tr_velo_to_cam calibration matrix (which is expressed in camera coordinates)
-
-The Velodyne point cloud data is NOT transformed because it's already in ROS-compatible coordinates!
-
-1) Publishes the **global** vehicle pose as a ``map -> base_link`` transform on every scan (and also as ``PoseStamped``).
-2) Publishes a **static** ``base_link -> velodyne`` transform once, using KITTI calibration if available.
-3) Adds **robust directory / file existence checks** with clear errors.
-4) Uses **sensor QoS** (``qos_profile_sensor_data``) for point cloud publishing to reduce drops under load.
-
-Assumptions
------------
-- Directory layout follows KITTI Odometry:
-
-  .. code-block:: text
-
-    <kitti_data_dir>/
-      data_odometry_velodyne/dataset/sequences/<SEQ>/velodyne/*.bin
-      data_odometry_poses/dataset/poses/<SEQ>.txt             (optional; required for map->base_link)
-      data_odometry_calib/dataset/sequences/<SEQ>/calib.txt   (or calib_<SEQ>.txt; used for base_link->velodyne)
-
-Outputs
--------
-- sensor_msgs/PointCloud2 on ``pointcloud_topic``
-- geometry_msgs/PoseStamped on ``ground_truth_pose_topic``
-- TF:   map -> base_link (dynamic) each tick
-- TF:   base_link -> velodyne (static) once from calibration if found (identity otherwise)
-
-Usage
------
-.. code-block:: bash
-
-    ros2 launch kitti_data_loader kitti_data_loader.launch.py
-
-"""
 from __future__ import annotations
 
 import os

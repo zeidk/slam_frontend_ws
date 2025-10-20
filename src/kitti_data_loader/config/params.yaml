@@ -1,7 +1,7 @@
 /kitti_publisher:
   ros__parameters:
     # Root KITTI data directory
-    kitti_data_dir: /home/zeidk/github/slam_frontend_ws/data/kitti
+    kitti_data_dir: /home/zeid/github/slam_frontend_ws/data/kitti
 
     # Sequence ID (either "00" or "s00")
     dataset_sequence: s00

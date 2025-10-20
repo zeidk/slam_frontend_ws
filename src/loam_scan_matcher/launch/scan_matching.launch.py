@@ -1,58 +1,111 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Launch the LOAM-style scan matcher (NumPy/SciPy ICP).
+"""
+Launch File: scan_matching.launch.py
+====================================
 
-This launch file starts the scan matcher node which consumes edge/planar
-feature topics and publishes odometry (``/odom``), TF (``odom -> base_link``),
-and a path (``/trajectory``) suitable for Foxglove Studio visualization.
+Description
+-----------
+This launch file starts the **LOAM scan matching** stage and, by inclusion,
+its upstream dependencies. It first launches the **feature extraction pipeline**
+(which itself brings up KITTI playback and LiDAR preprocessing), then launches
+the scan matcher node configured via a package-local YAML file.
 
-Overridable Parameters
-----------------------
-edge_topic : str
-    Input edge features topic. Default: "features/edge_cloud".
-planar_topic : str
-    Input planar features topic. Default: "features/planar_cloud".
-voxel_size : float
-    Voxel size for downsampling (m). Default: 0.2.
-max_icp_iter : int
-    Maximum ICP iterations per frame. Default: 20.
-icp_dist_thresh : float
-    Max correspondence distance (m). Default: 1.0.
-knn_normals : int
-    k-NN for normal estimation on reference. Default: 20.
-frame_odom : str
-    World frame id (Default: "odom").
-frame_base : str
-    Base frame id (Default: "base_link").
+Pipeline (launch order)
+-----------------------
+1) **Feature Extraction Pipeline** (included from
+   ``loam_feature_extraction/launch/feature_extraction.launch.py``)
+   - KITTI Data Loader (raw LiDAR + ground truth)
+   - LiDAR Preprocessing (e.g., voxel downsampling)
+   - LOAM Feature Extraction (publishes edge/planar feature clouds)
 
-Example
+2) **LOAM Scan Matcher** (this file)
+   - Subscribes to: ``features/edge_cloud`` and ``features/planar_cloud``
+   - Publishes: odometry (``/odom``), TF (``odom -> base_link``), and path (``/trajectory``)
+
+Configuration
+-------------
+All scan matcher parameters are loaded from:
+``loam_scan_matcher/config/params.yaml``
+
+**No inline parameter overrides** are provided in this launch file, ensuring that
+edits to the YAML fully control behavior (topics, frames, ICP settings, etc.).
+
+Execution
+---------
+Launch the full chain (KITTI → Preprocessing → Features → Scan Matching):
+
+.. code-block:: bash
+
+   ros2 launch loam_scan_matcher scan_matching.launch.py
+
+Returns
 -------
-ros2 launch loam_scan_matcher scan_matching.launch.py \
-    edge_topic:=features/edge_cloud \
-    planar_topic:=features/planar_cloud \
-    voxel_size:=0.2
+launch.LaunchDescription
+    A ROS 2 launch description that includes the feature extraction pipeline
+    and the LOAM scan matcher node, with parameters sourced from YAML only.
 """
 
 from launch import LaunchDescription
+from launch.actions import IncludeLaunchDescription
+from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.substitutions import PathJoinSubstitution
+from launch_ros.substitutions import FindPackageShare
 from launch_ros.actions import Node
 
 
 def generate_launch_description() -> LaunchDescription:
-    """Generate the ROS 2 launch description for the scan matcher node."""
-    node = Node(
-        package='loam_scan_matcher',
-        executable='scan_matcher_node',
-        name='loam_scan_matcher',
-        output='screen',
-        parameters=[{
-            'edge_topic': 'features/edge_cloud',
-            'planar_topic': 'features/planar_cloud',
-            'voxel_size': 0.2,
-            'max_icp_iter': 20,
-            'icp_dist_thresh': 1.0,
-            'knn_normals': 20,
-            'frame_odom': 'odom',
-            'frame_base': 'base_link',
-        }]
+    """
+    Compose the launch description for LOAM scan matching.
+
+    Steps:
+      1) Include the **feature extraction** launch file from the
+         ``loam_feature_extraction`` package so that KITTI playback and LiDAR
+         preprocessing are available before scan matching starts.
+      2) Launch the **scan matcher** node from the ``loam_scan_matcher`` package,
+         loading its configuration solely from ``config/params.yaml``.
+
+    Returns:
+        launch.LaunchDescription: The composed launch description.
+    """
+    # ------------------------------------------------------------------
+    # Include LOAM Feature Extraction Pipeline
+    # (KITTI loader + preprocessing + feature extractor)
+    # ------------------------------------------------------------------
+    feature_extraction_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            PathJoinSubstitution([
+                FindPackageShare("loam_feature_extraction"),
+                "launch",
+                "feature_extraction.launch.py",
+            ])
+        )
     )
-    return LaunchDescription([node])
+
+    # ------------------------------------------------------------------
+    # Scan Matcher parameters from YAML (no inline overrides)
+    # ------------------------------------------------------------------
+    scan_matcher_params = PathJoinSubstitution([
+        FindPackageShare("loam_scan_matcher"),
+        "config",
+        "params.yaml",
+    ])
+
+    # ------------------------------------------------------------------
+    # LOAM Scan Matcher Node
+    # ------------------------------------------------------------------
+    scan_matcher_node = Node(
+        package="loam_scan_matcher",
+        executable="loam_scan_matcher",
+        name="loam_scan_matcher",
+        output="screen",
+        parameters=[scan_matcher_params],  # <-- YAML-driven configuration only
+    )
+
+    # ------------------------------------------------------------------
+    # Launch: feature extraction first, then scan matcher
+    # ------------------------------------------------------------------
+    return LaunchDescription([
+        feature_extraction_launch,
+        scan_matcher_node,
+    ])

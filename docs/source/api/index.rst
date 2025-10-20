@@ -10,3 +10,4 @@ in the ROS 2 SLAM Frontend packages.
    kitti_data_loader
    lidar_preprocessing
    loam_feature_extraction
+   loam_scan_matching

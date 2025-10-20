@@ -1,0 +1,198 @@
+{
+  "configById": {
+    "3D!main": {
+      "cameraState": {
+        "perspective": true,
+        "distance": 288.0066533291467,
+        "phi": 70.00000000000335,
+        "thetaOffset": 45.000000000007645,
+        "targetOffset": [
+          109.65403403630039,
+          -1.842725437783642,
+          -1.0343549934069096e-15
+        ],
+        "target": [
+          0,
+          0,
+          0
+        ],
+        "targetOrientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "fovy": 45,
+        "near": 0.5,
+        "far": 5000
+      },
+      "followMode": "follow-pose",
+      "followTf": "base_link",
+      "scene": {
+        "backgroundColor": "#101013",
+        "transforms": {
+          "showLabel": false
+        }
+      },
+      "topics": {
+        "/features/edge_cloud": {
+          "visible": false,
+          "colorMode": "colormap",
+          "pointSize": 3,
+          "pointShape": "cube",
+          "decayTime": 0,
+          "colorField": "intensity",
+          "colorMap": "turbo",
+          "cubeSize": 0.2
+        },
+        "/features/planar_cloud": {
+          "visible": false,
+          "colorMode": "gradient",
+          "pointSize": 3,
+          "pointShape": "circle",
+          "decayTime": 0,
+          "colorField": "intensity",
+          "colorMap": "turbo"
+        },
+        "/scan_match/trajectory": {
+          "visible": true,
+          "type": "line",
+          "lineWidth": 2,
+          "gradient": [
+            "#ff6bcbff",
+            "rgba(124, 107, 255, 0.5)"
+          ]
+        },
+        "/kitti/ground_truth_pose": {
+          "visible": true,
+          "type": "arrow"
+        },
+        "/kitti/pointcloud_raw": {
+          "visible": true,
+          "colorField": "intensity",
+          "colorMode": "colormap",
+          "colorMap": "turbo"
+        },
+        "/preprocessing/downsampled_cloud": {
+          "visible": false,
+          "colorField": "intensity",
+          "colorMode": "colormap",
+          "colorMap": "turbo"
+        }
+      },
+      "layers": {
+        "grid": {
+          "visible": true,
+          "frameLocked": true,
+          "size": 10,
+          "divisions": 10,
+          "lineWidth": 1,
+          "color": "#808080ff",
+          "frameId": "map"
+        },
+        "axes": {
+          "visible": true,
+          "frameId": "base_link",
+          "size": 2
+        }
+      },
+      "publish": {
+        "type": "point",
+        "poseTopic": "/move_base_simple/goal",
+        "pointTopic": "/clicked_point",
+        "poseEstimateTopic": "/initialpose",
+        "poseEstimateXDeviation": 0.5,
+        "poseEstimateYDeviation": 0.5,
+        "poseEstimateThetaDeviation": 0.26179939
+      },
+      "imageMode": {},
+      "transforms": {}
+    },
+    "TransformTree!tf": {},
+    "TopicGraph!graph": {},
+    "Plot!feature_widths": {
+      "paths": [
+        {
+          "value": "/features/edge_cloud.width",
+          "enabled": true,
+          "timestampMethod": "receiveTime",
+          "label": "edge.width"
+        },
+        {
+          "value": "/features/planar_cloud.width",
+          "enabled": true,
+          "timestampMethod": "receiveTime",
+          "label": "planar.width"
+        }
+      ],
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "sidebarDimension": 260,
+      "xAxisLabel": "timestamp",
+      "yAxisLabel": "points",
+      "showPlotValuesInLegend": false
+    },
+    "Plot!pose_xyz": {
+      "paths": [
+        {
+          "value": "/scan_match/odometry.pose.pose.position.x",
+          "enabled": true,
+          "timestampMethod": "receiveTime",
+          "label": "x (m)"
+        },
+        {
+          "value": "/scan_match/odometry.pose.pose.position.y",
+          "enabled": true,
+          "timestampMethod": "receiveTime",
+          "label": "y (m)"
+        },
+        {
+          "value": "/scan_match/odometry.pose.pose.position.z",
+          "enabled": true,
+          "timestampMethod": "receiveTime",
+          "label": "z (m)"
+        }
+      ],
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": true,
+      "legendDisplay": "inline",
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "sidebarDimension": 260,
+      "xAxisLabel": "timestamp",
+      "yAxisLabel": "position (m)",
+      "showPlotValuesInLegend": false
+    }
+  },
+  "globalVariables": {},
+  "userNodes": {},
+  "playbackConfig": {
+    "speed": 1
+  },
+  "layout": {
+    "direction": "column",
+    "splitPercentage": 65,
+    "first": {
+      "direction": "row",
+      "splitPercentage": 70.77077077077078,
+      "first": "3D!main",
+      "second": {
+        "direction": "column",
+        "splitPercentage": 50,
+        "first": "TransformTree!tf",
+        "second": "TopicGraph!graph"
+      }
+    },
+    "second": {
+      "direction": "row",
+      "splitPercentage": 39.40607273940607,
+      "first": "Plot!feature_widths",
+      "second": "Plot!pose_xyz"
+    }
+  }
+}
