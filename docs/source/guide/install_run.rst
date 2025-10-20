@@ -126,7 +126,7 @@ Obtain the following archives for sequence ``00`` from Google Drive:
    <p>
      <a href="https://drive.google.com/file/d/1iHmkDuLv0z0C5Svzf78GfInyy9XNG_jM/view?usp=sharing" target="_blank" rel="noopener noreferrer">data_odometry_calib.zip (200 kB)</a><br>
      <a href="https://drive.google.com/file/d/1jzhq24ORy2vv-V2mawcjVFvm47cJgBho/view?usp=sharing" target="_blank" rel="noopener noreferrer">data_odometry_poses.zip (1.3 MB)</a><br>
-     <a href="https://drive.google.com/file/d/1oAi9ZJXyjG9HCaRnRSysfKZ8E-5TotUC/view?usp=sharing">data_odometry_velodyne.zip</a>
+     <a href="https://drive.google.com/file/d/1oAi9ZJXyjG9HCaRnRSysfKZ8E-5TotUC/view?usp=sharing">data_odometry_velodyne.zip  (6.2 GB)</a>
    </p>
 
 .. - <a href="https://www.google.com" target="_blank" rel="noopener noreferrer">data_odometry_velodyne.zip</a> (6.7 GB)
