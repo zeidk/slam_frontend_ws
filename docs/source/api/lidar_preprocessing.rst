@@ -55,8 +55,8 @@ Description
 +------------------------+---------+-----------------------------------------------+
 
 
-# If you have more than one YAML in this package, repeat:
-# .. literalinclude:: ../../../src/lidar_preprocessing/config/another.yaml
-#    :language: yaml
-#    :caption: lidar_preprocessing/config/another.yaml
-#    :linenos:
+.. If you have more than one YAML in this package, repeat:
+..  .. literalinclude:: ../../../src/lidar_preprocessing/config/another.yaml
+..     :language: yaml
+..     :caption: lidar_preprocessing/config/another.yaml
+..     :linenos:

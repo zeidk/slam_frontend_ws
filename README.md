@@ -11,6 +11,45 @@ For detailed API documentation, installation guide, and pipeline architecture, s
 - **[Pipeline Architecture](https://slam-frontend.readthedocs.io/en/latest/guide/pipeline.html)**
 - **[API Reference](https://slam-frontend.readthedocs.io/en/latest/api/index.html)**
 
+
+function slam_frontend_ws {
+  
+  alias data_loading='ros2 launch kitti_data_loader kitti_data_loader.launch.py'
+  alias foxglove='ros2 launch foxglove_bridge foxglove_bridge_launch.xml port:=8765'
+  alias preprocessing='ros2 launch lidar_preprocessing preprocessing.launch.py'
+  # set -e
+  # --- ROS 2 and Workspace Setup ---
+  VENV="${HOME}/ros2_venv"
+  WS="/home/zeid/github/slam_frontend_ws"
+  ROS2_DISTRO="jazzy" # Or your primary distro
+
+  # Activate Python virtual environment
+  if [ -f "${VENV}/bin/activate" ]; then
+    source "${VENV}/bin/activate"
+    echo "✅ ROS 2 + venv ready."
+  fi
+
+  # Source ROS 2
+  if [ -f "/opt/ros/${ROS2_DISTRO}/setup.zsh" ]; then
+    source "/opt/ros/${ROS2_DISTRO}/setup.zsh"
+  fi
+
+  # Source the workspace
+  if [ -f "${WS}/install/setup.zsh" ]; then
+    source "${WS}/install/setup.zsh"
+  fi
+
+  # Setup argcomplete after everything is sourced
+  if command -v register-python-argcomplete >/dev/null; then
+      eval "$(register-python-argcomplete ros2)"
+      eval "$(register-python-argcomplete colcon)"
+  fi
+
+  cd ${WS}
+}
+# call the function
+slam_frontend_ws
+
 <!-- ## Workspace
 
 This workspace contains three ROS 2 Python packages aligned with lecture 2C (SLAM Frontend) sections:

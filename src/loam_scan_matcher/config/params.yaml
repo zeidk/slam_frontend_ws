@@ -1,0 +1,10 @@
+loam_scan_matcher:
+  ros__parameters:
+    edge_topic: "features/edge_cloud"
+    planar_topic: "features/planar_cloud"
+    voxel_size: 0.2
+    max_icp_iter: 20
+    icp_dist_thresh: 1.0
+    knn_normals: 20
+    frame_odom: "odom"
+    frame_base: "base_link"

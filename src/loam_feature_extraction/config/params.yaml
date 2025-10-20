@@ -1,0 +1,11 @@
+loam_feature_extractor:
+  ros__parameters:
+    num_rings: 16              # VLP-16 has 16 laser beams
+    neighbor_size: 5            # m=5 => |S|=10 neighbors (lecture notation)
+    edge_percentage: 2.0        # Top 2% highest curvature (edges)
+    planar_percentage: 2.0      # Bottom 2% lowest curvature (planar)
+    min_range: 1.0              # Minimum valid range (meters)
+    max_range: 100.0            # Maximum valid range (meters)
+    input_topic: "preprocessing/downsampled_cloud"
+    edge_topic: "features/edge_cloud"
+    planar_topic: "features/planar_cloud"

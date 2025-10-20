@@ -57,3 +57,9 @@ Description
 +-------------------------+-----------------------------+-------------------------------------------------------------+
 | lidar_frame_id          | velodyne                    | Frame ID representing the LiDAR sensor reference frame.     |
 +-------------------------+-----------------------------+-------------------------------------------------------------+
+
+.. If you have more than one YAML in this package, repeat:
+..  .. literalinclude:: ../../../src/lidar_preprocessing/config/another.yaml
+..     :language: yaml
+..     :caption: lidar_preprocessing/config/another.yaml
+..     :linenos:
