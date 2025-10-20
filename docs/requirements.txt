@@ -5,7 +5,7 @@ myst-parser
 sphinx-autodoc-typehints
 sphinx-copybutton
 sphinx-design
-furo
-shibuya
+# furo
+# shibuya
 # open3d>=0.17
 # Note: We don't need numpy or ROS packages since they're mocked in conf.py
