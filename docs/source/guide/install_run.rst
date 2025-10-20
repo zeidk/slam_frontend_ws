@@ -1,4 +1,4 @@
-Installation and Running
+Installation
 ========================
 
 This guide explains how to install prerequisites for ENPM818Z (Lecture 2C).
@@ -13,7 +13,7 @@ Prerequisites
 
 .. note::
 
-   The source code provided was only tested on Ubuntu 24.04 with ROS 2 Jazzy.
+   The provided source code was developed and tested on Ubuntu 24.04 with ROS 2 Jazzy.
 
 Install Foxglove Studio
 ------------------------
